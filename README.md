@@ -1,110 +1,161 @@
-📄 Backend Resume Entry: StacksPlays Backend API
+# ⚙ StacksPlays Backend
 
-Role: Backend Developer
-Stack: Node.js, Express, TypeScript, REST API, JWT, Helmet, CORS, Zod
-Repo: (link to your GitHub backend repo once pushed)
+This is the *backend API* for [StacksPlays](https://github.com/POA200/stacksplays), a decentralized gaming platform built on the *Stacks blockchain*.  
+It powers *game scheduling, leaderboards, admin tools, and secure API endpoints* consumed by the React frontend.
+
+---
+
+## 🚀 Features
+
+- *Health Check* → /health endpoint for monitoring.  
+- *Game Scheduler API*  
+  - Fetch game state (open/closed, countdown).  
+  - Reset or schedule custom open/close times (admin-only).  
+- *Leaderboard API*  
+  - Fetch leaderboard by period (daily, weekly, season).  
+  - Submit/update scores (admin-only for now).  
+- *Security*  
+  - Admin endpoints protected via x-admin-key middleware.  
+  - CORS + Helmet for hardened HTTP security.  
+- *Validation* → Zod schemas for clean request validation.  
+
+---
+
+## 🛠 Tech Stack
+
+- *Language:* TypeScript  
+- *Framework:* Express.js  
+- *Validation:* Zod  
+- *Security:* Helmet, CORS  
+- *Auth:* Admin key middleware (JWT-ready)  
+- *Dev Tools:* ts-node-dev, dotenv  
+
+---
+
+## 📂 Project Structure
+
+backend/ ├── src/ │   ├── index.ts             # Entry point │   ├── server.ts            # App + middleware │   ├── routes/ │   │   ├── games.ts         # Game scheduling endpoints │   │   └── leaderboard.ts   # Leaderboard endpoints │   ├── services/ │   │   ├── game.services.ts # Game state logic │   │   └── leaderboard.service.ts │   └── middleware/ │       └── admin.ts         # Admin key guard ├── .env                     # Local environment config ├── package.json └── tsconfig.json
+
+---
+
+## 🔑 Environment Variables
+
+Create a .env file in the backend root:
+
+```bash
+PORT=4000
+CORS_ORIGIN=http://localhost:5173   # frontend origin
+ADMIN_KEY=123456789                 # admin header key
+JWT_SECRET=super-secret-key         # for future JWT auth
+
+Ensure .env is listed in .gitignore (for security).
 
 
 ---
 
-🔹 Project Overview
+💻 Installation & Setup
 
-Built a scalable backend API to power StacksPlays, a decentralized gaming platform on the Stacks blockchain. The backend manages game scheduling, user authentication, leaderboards, and admin tools for real-time casino-style and mini-game experiences.
+# Clone the repo
+git clone https://github.com/your-username/stacksplays-backend.git
+cd stacksplays-backend
 
+# Install dependencies
+npm install
 
----
+# Start development server
+npm run dev
 
-🔹 Key Responsibilities
+# Build for production
+npm run build
+npm start
 
-Designed and implemented RESTful API endpoints with Express.js and TypeScript.
-
-Structured backend with modular services, routes, and middleware for maintainability.
-
-Integrated JWT authentication and custom middleware for admin-only features.
-
-Developed game scheduling system:
-
-Allows admins to set game start/end times.
-
-Provides universal countdown timers to frontend clients.
-
-
-Created leaderboard service for tracking player scores and rankings.
-
-Configured CORS & Helmet for security hardening and safe cross-origin requests.
-
-Managed environment variables with dotenv and ensured sensitive data (.env) is excluded via .gitignore.
-
+The server will run at http://localhost:4000.
 
 
 ---
 
-🔹 Technical Highlights
+🔌 API Endpoints
 
-API Architecture
+Health
 
-/api/games/:id → fetch public state (open/closed, time left).
-
-/api/games/:id/reset → reset schedule (admin-only).
-
-/api/games/:id/schedule → custom open/close times (admin-only).
-
-/api/leaderboard → retrieve/update player rankings.
+GET /health → { ok: true }
 
 
-Utilities
+Games
 
-zod for request validation.
+GET /api/games/:id
+→ Fetch public game state (open/closed, countdown).
 
-Centralized services folder for game logic and leaderboard persistence.
+POST /api/games/:id/reset (admin)
+→ Reset game: open now, close in 7 days.
 
-
-Security
-
-JWT-based authentication for user/admin separation.
-
-Admin endpoints protected with requireAdmin middleware.
-
-Environment secrets safely managed with .env.
+POST /api/games/:id/schedule (admin)
+→ Set custom opensAt / closesAt (timestamps).
 
 
-Developer Experience
+Leaderboard
 
-Configured ts-node-dev for live TypeScript reload in development.
+GET /api/leaderboard?period=season&offset=0&limit=25
+→ Fetch leaderboard.
 
-Enforced typing with tsconfig.json for clean builds.
-
-Lightweight setup: npm run dev for local testing.
-
+POST /api/leaderboard/submit (admin)
+→ Upsert a player score.
 
 
 
 ---
 
-🔹 Achievements
+📸 Example Requests
 
-Delivered a restart-safe game scheduling system (time tracked via absolute UTC timestamps).
+# Health
+curl http://localhost:4000/health
 
-Enabled real-time leaderboard updates for competitive games.
+# Fetch game
+curl http://localhost:4000/api/games/word-search
 
-Built a secure admin dashboard API that integrates seamlessly with the frontend.
+# Reset game (admin)
+curl -X POST http://localhost:4000/api/games/word-search/reset \
+  -H "x-admin-key: 123456789"
 
-Laid foundation for scaling into multi-game support (casino, NFT minting, WordSearch, etc.).
+# Fetch leaderboard
+curl http://localhost:4000/api/leaderboard?period=season&limit=10
+
+
+---
+
+🛡 Security & Best Practices
+
+.env must never be committed.
+
+Admin endpoints require a header:
+
+x-admin-key: <ADMIN_KEY>
+
+Use strong values for JWT_SECRET if JWT auth is enabled.
+
+CORS is restricted to frontend origin via CORS_ORIGIN.
 
 
 
 ---
 
-🔹 Tech Stack
+📌 Roadmap
 
-Language: TypeScript
+[ ] Replace in-memory storage with Postgres/Redis.
 
-Framework: Express.js
+[ ] Add JWT-based user authentication.
 
-Database: (Pluggable — can extend to Postgres, MongoDB, or Redis)
+[ ] Add WebSocket or SSE for real-time leaderboard updates.
 
-Auth: JWT, middleware-based role checks
+[ ] Expose player “around me” rank API.
 
-Validation: Zod
+[ ] Integrate Stacks smart contract calls.
 
-Dev Tools: ts-node-dev, dotenv, Git/GitHub
+
+
+---
+
+👤 Author
+
+Developed by iPeter (StacksPlays Project).
+Backend for Stacks blockchain GameFi dApp.
