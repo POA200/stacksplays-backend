@@ -1,0 +1,19 @@
+### Submit a score
+POST http://localhost:4000/api/leaderboard
+Content-Type: application/json
+
+{
+  "period": "daily",
+  "userId": "user123",
+  "points": 50,
+  "bns": "StacksPlays.btc",
+  "address": "sp123abc",
+  "avatar": "/StacksplaysPunk.png",
+  "wins": 3,
+  "streak": 2
+}
+
+###
+
+### Get leaderboard
+GET http://localhost:4000/api/leaderboard?period=daily
