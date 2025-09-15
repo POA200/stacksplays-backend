@@ -11,7 +11,7 @@ app.use(helmet());
 
 // Allow multiple origins
 const allowedOrigins = [
-  "http://localhost:5173",
+  "https://stacksplays-frontend.vercel.app",
   "https://stacksplays-frontend.vercel.app",
 ];
 

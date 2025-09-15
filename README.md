@@ -44,7 +44,7 @@ Create a .env file in the backend root:
 
 ```bash
 PORT=4000
-CORS_ORIGIN=http://localhost:5173   # frontend origin
+CORS_ORIGIN= https://stacksplays-frontend.vercel.app  # frontend origin
 ADMIN_KEY=123456789                 # admin header key
 JWT_SECRET=super-secret-key         # for future JWT auth
 
