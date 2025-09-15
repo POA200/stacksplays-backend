@@ -2,33 +2,39 @@ import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 
-import gamesRouter from "./routes/games";
-import leaderboardRouter from "./routes/leaderboard";
+import gamesRouter from "./routes/games";          // ✅
+import leaderboardRouter from "./routes/leaderboard";  // ✅
 
 export const app = express();
 
 app.use(helmet());
 
-// ✅ Allow frontend origins explicitly
+// Allow multiple origins
 const allowedOrigins = [
-  "http://localhost:5173", // local dev
-  "https://stacksplays-frontend.vercel.app", // production frontend
+  "http://localhost:5173",
+  "https://stacksplays-frontend.vercel.app",
 ];
 
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, origin);
-      } else {
-        callback(new Error("Not allowed by CORS"));
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
       }
+      return callback(new Error("Not allowed by CORS"));
     },
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization", "x-admin-key"],
     credentials: true,
   })
 );
 
 app.use(express.json());
+
+// ✅ Debug log
+console.log("gamesRouter:", typeof gamesRouter);
+console.log("leaderboardRouter:", typeof leaderboardRouter);
 
 // Health check
 app.get("/health", (_req, res) => res.json({ ok: true }));
@@ -37,7 +43,7 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/games", gamesRouter);
 app.use("/api/leaderboard", leaderboardRouter);
 
-// Default root
+// Root
 app.get("/", (_req, res) => {
   res.send("StacksPlays Backend is running 🚀 Try /health");
 });
