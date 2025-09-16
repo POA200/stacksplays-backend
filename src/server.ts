@@ -4,8 +4,9 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import gamesRouter from "./routes/games";
 import leaderboardRouter from "./routes/leaderboard";
+import { ensurePostgres } from "./postgres"; // Import the PostgreSQL connection helper
 
-dotenv.config(); // Load environment variables from .env file
+dotenv.config();  // Load environment variables from .env file
 
 export const app = express();
 
@@ -34,6 +35,12 @@ app.use(
   })
 );
 
+// Ensure PostgreSQL connection before starting the server
+app.use(async (_req, _res, next) => {
+  await ensurePostgres();
+  next();
+});
+
 // Health check route
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
@@ -46,4 +53,10 @@ app.use("/api/leaderboard", leaderboardRouter);
 // Default root route
 app.get("/", (_req, res) => {
   res.send("StacksPlays Backend is running 🚀 Try /health");
+});
+
+// Start the server
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => {
+  console.log(`✅ API listening on http://localhost:${PORT}`);
 });
