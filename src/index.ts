@@ -8,10 +8,10 @@ const PORT = Number(process.env.PORT || 4000);
 
 async function main() {
   try {
-    // connect to Redis before listening
+    // Connect to Redis before starting the server
     await ensureRedis();
 
-    app.listen(PORT, () => {
+    app.listen(PORT, "0.0.0.0", () => {
       console.log(`✅ API listening on http://localhost:${PORT}`);
     });
   } catch (err) {
