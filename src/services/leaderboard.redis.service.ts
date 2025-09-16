@@ -1,7 +1,15 @@
+import Redis from "ioredis";
 
-import { redis } from "../redis";
+// Initialize the Redis client using ioredis
+const redis = new Redis({
+  host: process.env.REDIS_HOST || "localhost",  // Redis host
+  port: Number(process.env.REDIS_PORT || 6379), // Redis port
+  password: process.env.REDIS_PASSWORD,        // Redis password, if any
+});
 
 export type Period = "daily" | "weekly" | "season";
+
+// Leaderboard row type
 export type LeaderRow = {
   userId: string;
   bns?: string;
@@ -13,48 +21,48 @@ export type LeaderRow = {
   updatedAt: number;
 };
 
+// Redis key generation for leaderboard data
 const keyZ = (p: Period) => `lb:${p}:points`;
 const keyUser = (id: string) => `lb:user:${id}`;
 
-// Optional: metadata shape you store per user
+// Metadata that is optional per user
 export type UserMeta = {
   bns?: string;
-  address: string;       // recommended to store
+  address: string; // always store user address
   avatar?: string;
   wins?: number;
   streak?: number;
 };
 
-// --- ADD THIS: upsertScore (increment points + update user meta) ---
+// Increment score in leaderboard and update user metadata
 export async function upsertScore(
   period: Period,
   userId: string,
   deltaPoints: number,
   meta?: UserMeta
 ) {
-  // increment points in the zset for this period
-  const newScore = await redis.zIncrBy(keyZ(period), deltaPoints, userId);
+  // Increment user's points in the sorted set (zset)
+  const newScore = await redis.zincrby(keyZ(period), deltaPoints, userId);
 
-  // always bump updatedAt; optionally store/merge metadata
+  // Create metadata object for user
   const h: Record<string, string> = { updatedAt: String(Date.now()) };
   if (meta?.address) h.address = meta.address;
   if (meta?.bns) h.bns = meta.bns;
   if (meta?.avatar) h.avatar = meta.avatar;
-  if (typeof meta?.wins === "number") h.wins = String(meta.wins);
-  if (typeof meta?.streak === "number") h.streak = String(meta.streak);
+  if (meta?.wins !== undefined) h.wins = String(meta.wins);
+  if (meta?.streak !== undefined) h.streak = String(meta.streak);
 
+  // Update metadata (user hash) if needed
   if (Object.keys(h).length) {
-    await redis.hSet(keyUser(userId), h);
+    await redis.hset(keyUser(userId), h);
   }
 
   return { userId, score: Number(newScore) };
 }
 
-// --- ADD THIS: resetPeriod (clear the zset for a period) ---
+// Reset leaderboard for a given period
 export async function resetPeriod(period: Period) {
-  // Clears only the leaderboard for that period
-  // (user hashes are left intact)
-  await redis.del(keyZ(period));
+  await redis.del(keyZ(period));  // Clear leaderboard data for the given period
   return { ok: true };
 }
 
@@ -64,19 +72,19 @@ export async function getPage(period: Period, offset = 0, limit = 25) {
   const stop = offset + limit - 1;
 
   const [ids, total] = await Promise.all([
-    redis.zRange(keyZ(period), start, stop, { REV: true }),
-    redis.zCard(keyZ(period)),
+    redis.zrange(keyZ(period), start, stop, "REV"),
+    redis.zcard(keyZ(period)),
   ]);
 
   if (ids.length === 0) {
     return { total, rows: [] as Array<LeaderRow & { rank: number }> };
   }
 
-  // Make types explicit so TS is happy
+  // Retrieve scores and metadata for the leaderboard slice
   const [scores, metas] = await Promise.all([
-    redis.zMScore(keyZ(period), ids) as Promise<(number | null)[]>,
+    redis.zmscore(keyZ(period), ids) as Promise<(number | null)[]>,
     Promise.all(
-      ids.map((id) => redis.hGetAll(keyUser(id)) as Promise<Record<string, string>>)
+      ids.map((id) => redis.hgetall(keyUser(id)) as Promise<Record<string, string>>)
     ),
   ]);
 
@@ -101,14 +109,14 @@ export async function getPage(period: Period, offset = 0, limit = 25) {
   return { total, rows };
 }
 
-/** Get a user's rank and meta for a period */
+/** Get a user's rank and metadata for a period */
 export async function getRank(period: Period, userId: string) {
-  const rank0 = await redis.zRevRank(keyZ(period), userId);
+  const rank0 = await redis.zrevrank(keyZ(period), userId);
   if (rank0 === null) return null;
 
   const [score, meta] = await Promise.all([
-    redis.zScore(keyZ(period), userId), // number | null
-    redis.hGetAll(keyUser(userId)) as Promise<Record<string, string>>,
+    redis.zscore(keyZ(period), userId), // number | null
+    redis.hgetall(keyUser(userId)) as Promise<Record<string, string>>,
   ]);
 
   return {
@@ -126,18 +134,18 @@ export async function getRank(period: Period, userId: string) {
 
 /** Get a small slice around a user (±radius ranks) */
 export async function aroundMe(period: Period, userId: string, radius = 3) {
-  const rank0 = await redis.zRevRank(keyZ(period), userId);
+  const rank0 = await redis.zrevrank(keyZ(period), userId);
   if (rank0 === null) return { rows: [] as Array<LeaderRow & { rank: number }>, rank: null };
 
   const start = Math.max(0, rank0 - radius);
   const stop = rank0 + radius;
 
-  const ids = await redis.zRange(keyZ(period), start, stop, { REV: true });
+  const ids = await redis.zrange(keyZ(period), start, stop, "REV");
 
   const [scores, metas] = await Promise.all([
-    redis.zMScore(keyZ(period), ids) as Promise<(number | null)[]>,
+    redis.zmscore(keyZ(period), ids) as Promise<(number | null)[]>,
     Promise.all(
-      ids.map((id) => redis.hGetAll(keyUser(id)) as Promise<Record<string, string>>)
+      ids.map((id) => redis.hgetall(keyUser(id)) as Promise<Record<string, string>>)
     ),
   ]);
 
