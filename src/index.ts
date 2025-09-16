@@ -1,23 +1,27 @@
+import express from "express";
 import dotenv from "dotenv";
-dotenv.config();
+import { ensurePostgres } from "./postgres"; // Ensure to use your postgres connection logic
 
-import { app } from "./server";
-import { ensureRedis } from "./redis";
+dotenv.config(); // Load environment variables from .env
 
+const app = express();
 const PORT = Number(process.env.PORT || 4000);
 
-async function main() {
-  try {
-    // Connect to Redis before starting the server
-    await ensureRedis();
+// Middleware
+app.use(express.json());
 
-    app.listen(PORT, "0.0.0.0", () => {
-      console.log(`✅ API listening on http://localhost:${PORT}`);
-    });
-  } catch (err) {
-    console.error("❌ Failed to start server:", err);
-    process.exit(1);
-  }
+// Health check endpoint
+app.get("/health", (_req, res) => res.json({ ok: true }));
+
+// Connect to PostgreSQL before starting the server
+async function main() {
+  await ensurePostgres(); // This ensures you're connected to PostgreSQL
+  app.listen(PORT, () => {
+    console.log(`✅ API listening on http://localhost:${PORT}`);
+  });
 }
 
-main();
+main().catch((err) => {
+  console.error("❌ Failed to start server:", err);
+  process.exit(1);
+});
